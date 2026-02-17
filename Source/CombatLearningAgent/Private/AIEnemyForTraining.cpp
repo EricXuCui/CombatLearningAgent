@@ -110,16 +110,19 @@ void AAIEnemyForTraining::RunningMovement(bool Run)
 
 void AAIEnemyForTraining::EnableStrafe()
 {
-	AIController->GetBlackboardComponent()->SetValueAsBool(TEXT("Strafe"), true);
-	RunningMovement(false);
-	AIController->GetBlackboardComponent()->SetValueAsBool("Run", false);
-	if (UKismetMathLibrary::RandomBool())
+	if (bEquip)
 	{
-		RandomStrafeValue = 1;
-	}
-	else
-	{
-		RandomStrafeValue = -1;
+		AIController->GetBlackboardComponent()->SetValueAsBool(TEXT("Strafe"), true);
+		RunningMovement(false);
+		AIController->GetBlackboardComponent()->SetValueAsBool("Run", false);
+		if (UKismetMathLibrary::RandomBool())
+		{
+			RandomStrafeValue = 1;
+		}
+		else
+		{
+			RandomStrafeValue = -1;
+		}
 	}
 
 }
@@ -133,7 +136,7 @@ void AAIEnemyForTraining::StrafeMovement(int RandomStrafeDirections)
 
 void AAIEnemyForTraining::UltimateAttack()
 {
-	if (GetMesh()->GetAnimInstance())
+	if (GetMesh()->GetAnimInstance() && bEquip)
 	{
 		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 		ResetAllConditions();
@@ -183,12 +186,15 @@ void AAIEnemyForTraining::StopTheGame()
 
 void AAIEnemyForTraining::ExecuteDeath()
 {
-	StopTheGame();
-	GetMesh()->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
-	GetMesh()->SetSimulatePhysics(true);
-	SetActorTickEnabled(false);
-	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
+	if (!bTrainingMode)
+	{
+		StopTheGame();
+		GetMesh()->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
+		GetMesh()->SetSimulatePhysics(true);
+		SetActorTickEnabled(false);
+		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
+	}
 
 }
 
@@ -198,29 +204,29 @@ void AAIEnemyForTraining::ResetInjury()
 }
 
 
-void AAIEnemyForTraining::ResetTarget(ABaseRole * target)
+void AAIEnemyForTraining::ResetTarget()
 {
-	TSubclassOf<AAIEnemyForTraining> Target;
-	FTransform SpawnTransform = ReturnSpawnTransform();
-	TargetPawn = Cast<AAIEnemyForTraining>(UAIBlueprintHelperLibrary::SpawnAIFromClass(GetWorld(), Target, BehaviorTree, SpawnTransform.GetLocation(), SpawnTransform.Rotator()));
-	TargetPawn->EnemyTarget = target;
-	this->Destroy();
+	MaxHP = 200.f;
+	CurrentHP = MaxHP;
+	Damage = 15.f;
+	bDead = false;
+	bAttacking = false;
+	bRolling = false;
+	bDoding = false;
+	bTrainingMode = true;
+	bEquip = false;
+	bInjury = false;
+	ResetAllConditions();
+	AIController->GetBlackboardComponent()->SetValueAsBool("Strafe", false);
+	AIController->GetBlackboardComponent()->SetValueAsBool("StrafeDoOnce", false);
+	AIController->GetBlackboardComponent()->SetValueAsBool("Attack", false);
+	AIController->GetBlackboardComponent()->SetValueAsBool("Run", false);
+	GetCharacterMovement()->MaxWalkSpeed = 200.f;
+	SetActorTransform(InitialTransform, false, nullptr, ETeleportType::TeleportPhysics);
+	SetActorTickEnabled(false);
+
 }
 
-FTransform AAIEnemyForTraining::ReturnSpawnTransform()
-{
-	TSubclassOf<APlayerStart> Start;
-	Start = APlayerStart::StaticClass();
-	TArray<AActor*> SpawnPoints;
-	UGameplayStatics::GetAllActorsOfClassWithTag(GetWorld(), Start, FName("TargetStart"), SpawnPoints);
-	if (SpawnPoints.Num() == 0)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("No PlayerStart found with tag PlayerStart!"));
-		return FTransform();
-	}
-	int RandomSpawnPoints = UKismetMathLibrary::RandomIntegerInRange(0, SpawnPoints.Num() - 1);
-	return  SpawnPoints[RandomSpawnPoints]->GetTransform();
-}
 
 void AAIEnemyForTraining::ResetAttacking()
 {
@@ -346,6 +352,7 @@ void AAIEnemyForTraining::BeginPlay()
 		AIController->GetBlackboardComponent()->SetValueAsObject(TEXT("Target"), EnemyTarget);
 	}
 	SetActorTickEnabled(false);
+	InitialTransform = GetActorTransform();
 }
 
 // Called every frame

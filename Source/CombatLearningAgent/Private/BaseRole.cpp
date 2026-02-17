@@ -313,36 +313,26 @@ void ABaseRole::ResetInjury()
 
 void ABaseRole::ResetBaseRoleAgent()
 {
-	APlayerController* Temp = Cast<APlayerController>(GetOwner());
-	if (Temp)
-	{
-		Temp->UnPossess();
-		PlayerPawn = GetWorld()->SpawnActor<ABaseRole>(CharacterToSpawn, ReturnSpawnTransform());
-		GEngine->AddOnScreenDebugMessage(-1, 2.F, FColor::Black, TEXT("Respawned"));
-		Temp->Possess(Cast<ACharacter>(PlayerPawn));
-	}
-	if (bTrainingMode)
-	{
-		PlayerPawn->bTrainingMode = true;
-	}
-	EnemyTarget->ResetTarget(PlayerPawn);
-	this->Destroy();
+	MaxHP = 100.f;
+	CurrentHP = 100.f;
+	Damage = 15.f;
+	MaxStamina = 100.f;
+	CurrentStamina = 100.f;
+	bDead = false;
+	bAttacking = false;
+	bRunning = false;
+	bRolling = false;
+	bDefend = false;
+	bDoding = false;
+	bTrainingMode = true;
+	bEquip = false;
+	bInjury = false;
+	GetCharacterMovement()->MaxWalkSpeed = 200.f;
+	EnemyTarget->ResetTarget();
+	SetActorTransform(InitialTransform, false, nullptr, ETeleportType::TeleportPhysics);
+	DrawSword();
 }
 
-FTransform ABaseRole::ReturnSpawnTransform()
-{
-	TSubclassOf<APlayerStart> Start;
-	Start = APlayerStart::StaticClass();
-	TArray<AActor*> SpawnPoints;
-	UGameplayStatics::GetAllActorsOfClassWithTag(GetWorld(), Start, FName("PlayerStart"), SpawnPoints);
-	if (SpawnPoints.Num() == 0)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("No PlayerStart found with tag PlayerStart!"));
-		return FTransform();  
-	}
-	int RandomSpawnPoints = UKismetMathLibrary::RandomIntegerInRange(0, SpawnPoints.Num() - 1);
-	return SpawnPoints[RandomSpawnPoints]->GetTransform();
-}
 
 void ABaseRole::LockCameraToTarget()
 {
@@ -453,17 +443,20 @@ void ABaseRole::ResetAllConditions()
 
 void ABaseRole::ExecuteDeath()
 {
-	DisableInput(Cast<APlayerController>(GetController()));
-	GetMesh()->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
-	GetMesh()->SetSimulatePhysics(true);
-	GetCharacterMovement()->DisableMovement();
-	if (EnemyTarget)
+	if (!bTrainingMode)
 	{
-		EnemyTarget->StopTheGame();
+		DisableInput(Cast<APlayerController>(GetController()));
+		GetMesh()->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
+		GetMesh()->SetSimulatePhysics(true);
+		GetCharacterMovement()->DisableMovement();
+		if (EnemyTarget)
+		{
+			EnemyTarget->StopTheGame();
+		}
+		SetActorTickEnabled(false);
+		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
 	}
-	SetActorTickEnabled(false);
-	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
 
 }
 
@@ -506,10 +499,11 @@ void ABaseRole::BeginPlay()
 	if (bTrainingMode)
 	{
 		DrawSword();
+		DisableInput(Cast<APlayerController>(GetController()));
 	}
 	CurrentStamina = MaxStamina;
 	CurrentHP = MaxHP;
-
+	InitialTransform = GetActorTransform();
 }
 
 // Called every frame
@@ -535,7 +529,9 @@ void ABaseRole::Tick(float DeltaTime)
 		{
 			if (EnemyTarget)
 			{
-				SetActorRotation(FRotator(GetActorRotation().Pitch, FocusRotation.Yaw, GetActorRotation().Roll));
+				FRotator RinterpFocusRotation = UKismetMathLibrary::RInterpTo(GetController()->GetControlRotation(), FocusRotation, GetWorld()->GetDeltaSeconds(), 15);
+				GetController()->SetControlRotation(FRotator(FMath::Clamp(RinterpFocusRotation.Pitch - 5, -30, 30), RinterpFocusRotation.Yaw, RinterpFocusRotation.Roll));
+				SetActorRotation(FRotator(GetActorRotation().Pitch, RinterpFocusRotation.Yaw, GetActorRotation().Roll));
 			}
 		}
 		if (bLock)

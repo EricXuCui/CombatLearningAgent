@@ -57,8 +57,8 @@ public:
 	AAIEnemyForTraining* TargetPawn;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CPPVariables")
-	UBehaviorTree * BehaviorTree;
 
+	FTransform InitialTransform;
 	int AttackIndex;
 	int RandomStrafeValue;
 	bool bUltimateSkillLoop;
@@ -109,8 +109,7 @@ public:
 	void AttackTrace();
 	UFUNCTION(BlueprintCallable)
 	void ResetInjury();
-	void ResetTarget(ABaseRole * target);
-	FTransform ReturnSpawnTransform();
+	void ResetTarget();
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;

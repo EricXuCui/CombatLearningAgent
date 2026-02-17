@@ -69,6 +69,7 @@ public:
 	TSubclassOf<ACharacter> CharacterToSpawn;
 	ABaseRole* PlayerPawn;
 	FRotator DesireRotation;
+	FTransform InitialTransform;
 
 	//CPP Animation Montages
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CPPAnimations")
