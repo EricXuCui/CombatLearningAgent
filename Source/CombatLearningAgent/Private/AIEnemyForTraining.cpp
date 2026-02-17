@@ -221,6 +221,8 @@ void AAIEnemyForTraining::ResetTarget()
 	AIController->GetBlackboardComponent()->SetValueAsBool("StrafeDoOnce", false);
 	AIController->GetBlackboardComponent()->SetValueAsBool("Attack", false);
 	AIController->GetBlackboardComponent()->SetValueAsBool("Run", false);
+	UBehaviorTreeComponent* BTComp = Cast<UBehaviorTreeComponent>(AIController->BrainComponent);
+	BTComp->RestartLogic();
 	GetCharacterMovement()->MaxWalkSpeed = 200.f;
 	SetActorTransform(InitialTransform, false, nullptr, ETeleportType::TeleportPhysics);
 	SetActorTickEnabled(false);
@@ -360,6 +362,7 @@ void AAIEnemyForTraining::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	StrafeMovement(RandomStrafeValue);
+	
 }
 
 // Called to bind functionality to input

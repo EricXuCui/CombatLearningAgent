@@ -328,7 +328,10 @@ void ABaseRole::ResetBaseRoleAgent()
 	bEquip = false;
 	bInjury = false;
 	GetCharacterMovement()->MaxWalkSpeed = 200.f;
-	EnemyTarget->ResetTarget();
+	if (EnemyTarget)
+	{
+		EnemyTarget->ResetTarget();
+	}
 	SetActorTransform(InitialTransform, false, nullptr, ETeleportType::TeleportPhysics);
 	DrawSword();
 }
