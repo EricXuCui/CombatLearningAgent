@@ -37,7 +37,6 @@ void AAIEnemyForTraining::DrawSword()
 	{
 		if (!bEquip)
 		{
-			EnemyTarget = Cast<ABaseRole>(UGameplayStatics::GetActorOfClass(GetWorld(), InstanceOfEnemy));
 			UAnimInstance* AnimInstace = GetMesh()->GetAnimInstance();
 			AnimInstace->Montage_Play(EquipMontage);
 			bEquip = true;
@@ -206,6 +205,7 @@ void AAIEnemyForTraining::ResetInjury()
 
 void AAIEnemyForTraining::ResetTarget()
 {
+	SetTrainingTarget();
 	MaxHP = 200.f;
 	CurrentHP = MaxHP;
 	Damage = 15.f;
@@ -346,7 +346,7 @@ void AAIEnemyForTraining::UltimateAttackShifting(float Lerp)
 void AAIEnemyForTraining::BeginPlay()
 {
 	Super::BeginPlay();
-	EnemyTarget = Cast<ABaseRole>(UGameplayStatics::GetActorOfClass(GetWorld(), InstanceOfEnemy));
+	SetTrainingTarget();
 	CurrentHP = MaxHP;
 	AIController = Cast<AAIEnemyController>(GetController());
 	if (AIController)

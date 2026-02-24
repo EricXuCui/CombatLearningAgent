@@ -103,11 +103,11 @@ void ABaseRole::StopRunning()
 
 void ABaseRole::Dodge()
 {
-	if (!bRolling && !bAttacking && !bDoding && bEquip && CurrentStamina >= 10)
+	if (!bRolling && !bAttacking && !bDoding && bEquip && CurrentStamina >= 15)
 	{
 		if (GetMesh()->GetAnimInstance())
 		{
-			CurrentStamina -= 10;
+			CurrentStamina -= 15;
 			if (bRunning)
 			{
 				StopRunning();
@@ -153,7 +153,7 @@ void ABaseRole::Dodge()
 
 void ABaseRole::Roll()
 {
-	if (!bRolling && !bAttacking && !bDoding && bEquip && CurrentStamina >= 13)
+	if (!bRolling && !bAttacking && !bDoding && bEquip && CurrentStamina >= 15)
 	{
 		if (GetMesh()->GetAnimInstance())
 		{
@@ -161,7 +161,7 @@ void ABaseRole::Roll()
 			{
 				StopRunning();
 			}
-			CurrentStamina -= 13;
+			CurrentStamina -= 15;
 			UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 			bRolling = true;
 			bDefend = false;
@@ -313,6 +313,7 @@ void ABaseRole::ResetInjury()
 
 void ABaseRole::ResetBaseRoleAgent()
 {
+	SetTrainingTarget();
 	MaxHP = 100.f;
 	CurrentHP = 100.f;
 	Damage = 15.f;
@@ -427,7 +428,6 @@ void ABaseRole::DrawSword()
 		{
 			UAnimInstance* AnimInstace = GetMesh()->GetAnimInstance();
 			AnimInstace->Montage_Play(EquipMontage);
-			EnemyTarget = Cast<AAIEnemyForTraining>(UGameplayStatics::GetActorOfClass(GetWorld(), InstanceOfEnemy));
 			if (EnemyTarget)
 			{
 				EnemyTarget->DrawSword();
@@ -498,12 +498,9 @@ void ABaseRole::ResetRoll()
 void ABaseRole::BeginPlay()
 {
 	Super::BeginPlay();
-	EnemyTarget = Cast<AAIEnemyForTraining>(UGameplayStatics::GetActorOfClass(GetWorld(), InstanceOfEnemy));
-	if (bTrainingMode)
-	{
-		DrawSword();
-		DisableInput(Cast<APlayerController>(GetController()));
-	}
+	SetTrainingTarget();
+	DrawSword();
+	DisableInput(Cast<APlayerController>(GetController()));
 	CurrentStamina = MaxStamina;
 	CurrentHP = MaxHP;
 	InitialTransform = GetActorTransform();
@@ -532,9 +529,9 @@ void ABaseRole::Tick(float DeltaTime)
 		{
 			if (EnemyTarget)
 			{
-				FRotator RinterpFocusRotation = UKismetMathLibrary::RInterpTo(GetController()->GetControlRotation(), FocusRotation, GetWorld()->GetDeltaSeconds(), 15);
-				GetController()->SetControlRotation(FRotator(FMath::Clamp(RinterpFocusRotation.Pitch - 5, -30, 30), RinterpFocusRotation.Yaw, RinterpFocusRotation.Roll));
-				SetActorRotation(FRotator(GetActorRotation().Pitch, RinterpFocusRotation.Yaw, GetActorRotation().Roll));
+				const FRotator FocusRot = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), EnemyTarget->GetActorLocation());
+				const FRotator NewRot =FMath::RInterpTo(GetActorRotation(), FocusRot, DeltaTime, 5.0f);
+				SetActorRotation(FRotator(GetActorRotation().Pitch, NewRot.Yaw, GetActorRotation().Roll));
 			}
 		}
 		if (bLock)
@@ -546,7 +543,7 @@ void ABaseRole::Tick(float DeltaTime)
 	}
 	else
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 2.F, FColor::Black, TEXT("111"));
+		SetTrainingTarget();
 	}
 	//Stamina mechanism
 	if (CurrentStamina < 100 && !bDefend && !bAttacking)
@@ -557,6 +554,7 @@ void ABaseRole::Tick(float DeltaTime)
 		}
 		else
 		{
+			CurrentStamina += 0.15;
 			CurrentStamina += 0.15;
 		}
 	}

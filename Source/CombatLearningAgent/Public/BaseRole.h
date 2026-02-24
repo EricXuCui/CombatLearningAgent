@@ -143,7 +143,9 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void ResetBaseRoleAgent();
 
-	FTransform ReturnSpawnTransform();
+	UFUNCTION(BlueprintImplementableEvent)
+	void SetTrainingTarget();
+
 	//Internal CPP Variables
 	int ForwardVal;
 	int RightVal;

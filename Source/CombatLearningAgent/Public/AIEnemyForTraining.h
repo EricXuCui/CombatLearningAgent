@@ -110,6 +110,8 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void ResetInjury();
 	void ResetTarget();
+	UFUNCTION(BlueprintImplementableEvent)
+	void SetTrainingTarget();
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
