@@ -8,7 +8,7 @@
 EBTNodeResult::Type UStrafeTask::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
 {
 	AIController = Cast<AAIEnemyController>(OwnerComp.GetAIOwner());
-	if (AIController)
+	if (AIController && AIController->GetBlackboardComponent())
 	{
 		Self = Cast<AAIEnemyForTraining>(AIController->GetPawn());
 		if (Self)
@@ -38,7 +38,7 @@ void UStrafeTask::CancelStrafe()
 {
 	if (AIController)
 	{
-		if (Self)
+		if (Self && AIController->GetBlackboardComponent())
 		{
 			AIController->GetBlackboardComponent()->SetValueAsBool("Strafe", false);
 			Self->SetActorTickEnabled(false);

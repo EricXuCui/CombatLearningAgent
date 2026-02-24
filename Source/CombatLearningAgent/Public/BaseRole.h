@@ -67,8 +67,11 @@ public:
 	bool bInjury;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CPPVariables")
 	TSubclassOf<ACharacter> CharacterToSpawn;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "CPPVariables")
 	ABaseRole* PlayerPawn;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "CPPVariables")
 	FRotator DesireRotation;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "CPPVariables")
 	FTransform InitialTransform;
 
 	//CPP Animation Montages
@@ -142,14 +145,83 @@ public:
 	void CameraFovExtend(bool bEnable);
 	UFUNCTION(BlueprintCallable)
 	void ResetBaseRoleAgent();
+	UFUNCTION(BlueprintCallable)
+	void ApplyCurriculumScalars(float InHPScale, float InDamageScale, float InStaminaScale);
+	UFUNCTION(BlueprintCallable)
+	void ApplyCurriculumForEpisode(int32 EpisodeIndex);
+	UFUNCTION(BlueprintPure, Category = "Learning|Reward")
+	bool IsTouchingWall(float CheckDistance = 18.0f) const;
+	UFUNCTION(BlueprintPure, Category = "Learning|Observation")
+	FVector2D GetEnemyRelativeLocationLocal2D(float LocationScale = 10000.0f) const;
+	UFUNCTION(BlueprintPure, Category = "Learning|Observation")
+	float GetEnemyDistanceNormalized(float MaxDistance = 2000.0f) const;
+	UFUNCTION(BlueprintPure, Category = "Learning|Observation")
+	void GetWallDistanceObservations(float TraceDistance, float& FrontNorm, float& RightNorm, float& BackNorm, float& LeftNorm) const;
+	UFUNCTION(BlueprintPure, Category = "Learning|Reward")
+	bool IsLikelyStuck(float SpeedThreshold = 20.0f, float EnemyDistanceThreshold = 140.0f, float WallCheckDistance = 18.0f) const;
+	UFUNCTION(BlueprintPure, Category = "Learning|Reward")
+	float GetMovementJitterScore() const;
+	void RefreshEnemyTarget(bool bForce = false);
 
-	UFUNCTION(BlueprintImplementableEvent)
-	void SetTrainingTarget();
-
+	FTransform ReturnSpawnTransform();
 	//Internal CPP Variables
-	int ForwardVal;
-	int RightVal;
+	float ForwardVal;
+	float RightVal;
+	float LastForwardVal;
+	float LastRightVal;
+	float MovementJitterAccumulator;
 	int AttackIndex;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Curriculum")
+	float BaseMaxHP;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Curriculum")
+	float BaseDamage;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Curriculum")
+	float BaseMaxStamina;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Curriculum")
+	float CurriculumHPScale;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Curriculum")
+	float CurriculumDamageScale;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Curriculum")
+	float CurriculumStaminaScale;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Curriculum Scheduler")
+	int32 CurriculumWarmupEpisodes;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Curriculum Scheduler")
+	int32 CurriculumRampEpisodes;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Curriculum Scheduler")
+	float WarmupPlayerHPScale;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Curriculum Scheduler")
+	float WarmupPlayerDamageScale;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Curriculum Scheduler")
+	float WarmupPlayerStaminaScale;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Curriculum Scheduler")
+	float WarmupEnemyHPScale;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Curriculum Scheduler")
+	float WarmupEnemyDamageScale;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Learning|Performance")
+	float EnemyTargetRefreshInterval;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Learning|Performance")
+	bool bEnableWallObservationCache;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Learning|Performance")
+	float WallObservationCacheInterval;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Learning|Performance")
+	float TrainingFocusUpdateInterval;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Learning|Performance")
+	float SpawnProtectionSeconds;
+
+private:
+	float EnemyTargetRefreshCooldown;
+	float TrainingFocusCooldown;
+	mutable float CachedWallFrontNorm;
+	mutable float CachedWallRightNorm;
+	mutable float CachedWallBackNorm;
+	mutable float CachedWallLeftNorm;
+	mutable float WallObservationCacheCooldown;
+	float SpawnProtectionUntilTime;
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;

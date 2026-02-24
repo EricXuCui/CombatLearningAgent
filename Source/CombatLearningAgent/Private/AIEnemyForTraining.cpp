@@ -9,6 +9,22 @@
 #include "BaseRole.h"
 #include "Math/UnrealMathUtility.h"
 #include "Kismet/KismetMathLibrary.h"
+
+namespace
+{
+	float SanitizeCurriculumScale(float Scale)
+	{
+		return FMath::Max(0.1f, Scale);
+	}
+
+	void SetBlackboardBoolSafe(AAIEnemyController* Controller, const TCHAR* KeyName, bool bValue)
+	{
+		if (Controller && Controller->GetBlackboardComponent())
+		{
+			Controller->GetBlackboardComponent()->SetValueAsBool(KeyName, bValue);
+		}
+	}
+}
 // Sets default values
 AAIEnemyForTraining::AAIEnemyForTraining()
 {
@@ -17,8 +33,12 @@ AAIEnemyForTraining::AAIEnemyForTraining()
 	WeaponArrowComponent = CreateDefaultSubobject<UArrowComponent>(TEXT("WeaponArrow"));
 	WeaponArrowComponent->SetupAttachment(GetMesh());
 	// Initialize Variables
-	MaxHP = 200.f;
-	Damage = 15.f;
+	BaseMaxHP = 200.f;
+	BaseDamage = 15.f;
+	CurriculumHPScale = 1.f;
+	CurriculumDamageScale = 1.f;
+	MaxHP = BaseMaxHP;
+	Damage = BaseDamage;
 	bDead = false;
 	bAttacking = false;
 	bRolling = false;
@@ -27,8 +47,83 @@ AAIEnemyForTraining::AAIEnemyForTraining()
 	RandomStrafeValue = 1;
 	bUltimateAttacking = false;
 	bUltimateSkillLoop = false;
+	AttackIndex = 0;
+	StrafeIntervalSeconds = 3.0f;
+	StrafeInitialDelaySeconds = 1.0f;
+	UltimateIntervalSeconds = 6.0f;
+	UltimateInitialDelaySeconds = 2.0f;
+	EnemyTargetRefreshInterval = 0.5f;
+	SpawnProtectionSeconds = 0.35f;
+	EnemyTargetRefreshCooldown = 0.0f;
+	SpawnProtectionUntilTime = 0.0f;
 	CurrentHP = MaxHP;
 	GetCharacterMovement()->MaxWalkSpeed = 235.f;
+}
+
+void AAIEnemyForTraining::RefreshEnemyTarget(bool bForce)
+{
+	if (IsValid(EnemyTarget))
+	{
+		return;
+	}
+	EnemyTarget = nullptr;
+
+	if (!bForce && EnemyTargetRefreshCooldown > 0.0f)
+	{
+		return;
+	}
+
+	if (!GetWorld())
+	{
+		EnemyTargetRefreshCooldown = FMath::Max(0.05f, EnemyTargetRefreshInterval);
+		return;
+	}
+
+	UClass* EnemyClass = InstanceOfEnemy ? InstanceOfEnemy.Get() : ABaseRole::StaticClass();
+	if (!EnemyClass)
+	{
+		EnemyTargetRefreshCooldown = FMath::Max(0.05f, EnemyTargetRefreshInterval);
+		return;
+	}
+
+	TArray<AActor*> EnemyCandidates;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), EnemyClass, EnemyCandidates);
+
+	ABaseRole* BestTarget = nullptr;
+	float BestDistanceSq = TNumericLimits<float>::Max();
+	const FVector SelfLocation = GetActorLocation();
+	for (AActor* Candidate : EnemyCandidates)
+	{
+		ABaseRole* RoleCandidate = Cast<ABaseRole>(Candidate);
+		if (!IsValid(RoleCandidate) || RoleCandidate->bDead)
+		{
+			continue;
+		}
+
+		const float DistanceSq = FVector::DistSquared(SelfLocation, RoleCandidate->GetActorLocation());
+		if (DistanceSq < BestDistanceSq)
+		{
+			BestDistanceSq = DistanceSq;
+			BestTarget = RoleCandidate;
+		}
+	}
+
+	EnemyTarget = BestTarget;
+	EnemyTargetRefreshCooldown = FMath::Max(0.05f, EnemyTargetRefreshInterval);
+
+	if (AIController && AIController->GetBlackboardComponent())
+	{
+		AIController->GetBlackboardComponent()->SetValueAsObject(TEXT("Target"), EnemyTarget);
+	}
+}
+
+void AAIEnemyForTraining::ApplyCurriculumScalars(float InHPScale, float InDamageScale)
+{
+	CurriculumHPScale = SanitizeCurriculumScale(InHPScale);
+	CurriculumDamageScale = SanitizeCurriculumScale(InDamageScale);
+	MaxHP = BaseMaxHP * CurriculumHPScale;
+	Damage = BaseDamage * CurriculumDamageScale;
+	CurrentHP = FMath::Clamp(CurrentHP, 0.f, MaxHP);
 }
 
 void AAIEnemyForTraining::DrawSword()
@@ -37,16 +132,19 @@ void AAIEnemyForTraining::DrawSword()
 	{
 		if (!bEquip)
 		{
+			RefreshEnemyTarget(true);
 			UAnimInstance* AnimInstace = GetMesh()->GetAnimInstance();
 			AnimInstace->Montage_Play(EquipMontage);
 			bEquip = true;
 			if (AIController)
 			{
-				AIController->GetBlackboardComponent()->SetValueAsBool(TEXT("Equip"), true);
-				GetWorld()->GetTimerManager().SetTimer(_DelayRandomStrafeMovement, this, &AAIEnemyForTraining::EnableStrafe,
-					UKismetMathLibrary::RandomIntegerInRange(10, 15), true, UKismetMathLibrary::RandomIntegerInRange(10, 15));
-				GetWorld()->GetTimerManager().SetTimer(_DelayRandomUltimateAttack, this, &AAIEnemyForTraining::UltimateAttack,
-					UKismetMathLibrary::RandomIntegerInRange(10, 20), true, UKismetMathLibrary::RandomIntegerInRange(10, 20));
+				SetBlackboardBoolSafe(AIController, TEXT("Equip"), true);
+				const float SafeStrafeInterval = FMath::Max(0.25f, StrafeIntervalSeconds);
+				const float SafeStrafeDelay = FMath::Max(0.0f, StrafeInitialDelaySeconds);
+				const float SafeUltimateInterval = FMath::Max(0.5f, UltimateIntervalSeconds);
+				const float SafeUltimateDelay = FMath::Max(0.0f, UltimateInitialDelaySeconds);
+				GetWorld()->GetTimerManager().SetTimer(_DelayRandomStrafeMovement, this, &AAIEnemyForTraining::EnableStrafe, SafeStrafeInterval, true, SafeStrafeDelay);
+				GetWorld()->GetTimerManager().SetTimer(_DelayRandomUltimateAttack, this, &AAIEnemyForTraining::UltimateAttack, SafeUltimateInterval, true, SafeUltimateDelay);
 			}
 		}
 	}
@@ -97,9 +195,9 @@ void AAIEnemyForTraining::RunningMovement(bool Run)
 	if (Run)
 	{
 		GetCharacterMovement()->MaxWalkSpeed = 450.f;
-		AIController->GetBlackboardComponent()->SetValueAsBool("Strafe", false);
+		SetBlackboardBoolSafe(AIController, TEXT("Strafe"), false);
 		SetActorTickEnabled(false);
-		AIController->GetBlackboardComponent()->SetValueAsBool("StrafeDoOnce", false);
+		SetBlackboardBoolSafe(AIController, TEXT("StrafeDoOnce"), false);
 	}
 	else
 	{
@@ -111,9 +209,10 @@ void AAIEnemyForTraining::EnableStrafe()
 {
 	if (bEquip)
 	{
-		AIController->GetBlackboardComponent()->SetValueAsBool(TEXT("Strafe"), true);
+		SetActorTickEnabled(true);
+		SetBlackboardBoolSafe(AIController, TEXT("Strafe"), true);
 		RunningMovement(false);
-		AIController->GetBlackboardComponent()->SetValueAsBool("Run", false);
+		SetBlackboardBoolSafe(AIController, TEXT("Run"), false);
 		if (UKismetMathLibrary::RandomBool())
 		{
 			RandomStrafeValue = 1;
@@ -139,13 +238,10 @@ void AAIEnemyForTraining::UltimateAttack()
 	{
 		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 		ResetAllConditions();
-		if (AIController)
-		{
-			AIController->GetBlackboardComponent()->SetValueAsBool("Strafe", false);
-			AIController->GetBlackboardComponent()->SetValueAsBool("StrafeDoOnce", false);
-			AIController->GetBlackboardComponent()->SetValueAsBool("Attack", false);
-			AIController->GetBlackboardComponent()->SetValueAsBool("Run", false);
-		}
+		SetBlackboardBoolSafe(AIController, TEXT("Strafe"), false);
+		SetBlackboardBoolSafe(AIController, TEXT("StrafeDoOnce"), false);
+		SetBlackboardBoolSafe(AIController, TEXT("Attack"), false);
+		SetBlackboardBoolSafe(AIController, TEXT("Run"), false);
 		bUltimateAttacking = true;
 		RunningMovement(false);
 		SetActorTickEnabled(false);
@@ -179,6 +275,10 @@ void AAIEnemyForTraining::StopTheGame()
 	GetWorld()->GetTimerManager().ClearTimer(_DelayRandomStrafeMovement);
 	GetWorld()->GetTimerManager().ClearTimer(_DelayRandomUltimateAttack);
 	GetWorld()->GetTimerManager().ClearTimer(_DelayUltimateAttackShifting);
+	if (UAnimInstance* AnimInstance = GetMesh() ? GetMesh()->GetAnimInstance() : nullptr)
+	{
+		AnimInstance->StopAllMontages(0.1f);
+	}
 	ResetAllConditions();
 
 }
@@ -205,10 +305,16 @@ void AAIEnemyForTraining::ResetInjury()
 
 void AAIEnemyForTraining::ResetTarget()
 {
-	SetTrainingTarget();
-	MaxHP = 200.f;
+	GetWorld()->GetTimerManager().ClearTimer(_DelayRandomStrafeMovement);
+	GetWorld()->GetTimerManager().ClearTimer(_DelayRandomUltimateAttack);
+	GetWorld()->GetTimerManager().ClearTimer(_DelayUltimateAttackShifting);
+	if (UAnimInstance* AnimInstance = GetMesh() ? GetMesh()->GetAnimInstance() : nullptr)
+	{
+		AnimInstance->StopAllMontages(0.1f);
+	}
+
+	ApplyCurriculumScalars(CurriculumHPScale, CurriculumDamageScale);
 	CurrentHP = MaxHP;
-	Damage = 15.f;
 	bDead = false;
 	bAttacking = false;
 	bRolling = false;
@@ -216,16 +322,30 @@ void AAIEnemyForTraining::ResetTarget()
 	bTrainingMode = true;
 	bEquip = false;
 	bInjury = false;
+	if (bTrainingMode && GetWorld())
+	{
+		SpawnProtectionUntilTime = GetWorld()->GetTimeSeconds() + FMath::Max(0.0f, SpawnProtectionSeconds);
+	}
+	else
+	{
+		SpawnProtectionUntilTime = 0.0f;
+	}
 	ResetAllConditions();
-	AIController->GetBlackboardComponent()->SetValueAsBool("Strafe", false);
-	AIController->GetBlackboardComponent()->SetValueAsBool("StrafeDoOnce", false);
-	AIController->GetBlackboardComponent()->SetValueAsBool("Attack", false);
-	AIController->GetBlackboardComponent()->SetValueAsBool("Run", false);
-	UBehaviorTreeComponent* BTComp = Cast<UBehaviorTreeComponent>(AIController->BrainComponent);
-	BTComp->RestartLogic();
-	GetCharacterMovement()->MaxWalkSpeed = 200.f;
+	SetBlackboardBoolSafe(AIController, TEXT("Strafe"), false);
+	SetBlackboardBoolSafe(AIController, TEXT("StrafeDoOnce"), false);
+	SetBlackboardBoolSafe(AIController, TEXT("Attack"), false);
+	SetBlackboardBoolSafe(AIController, TEXT("Run"), false);
+	if (AIController)
+	{
+		UBehaviorTreeComponent* BTComp = Cast<UBehaviorTreeComponent>(AIController->BrainComponent);
+		if (BTComp)
+		{
+			BTComp->RestartLogic();
+		}
+	}
+	GetCharacterMovement()->MaxWalkSpeed = 235.f;
 	SetActorTransform(InitialTransform, false, nullptr, ETeleportType::TeleportPhysics);
-	SetActorTickEnabled(false);
+	SetActorTickEnabled(true);
 
 }
 
@@ -255,16 +375,19 @@ void AAIEnemyForTraining::ResetAllConditions()
 
 void AAIEnemyForTraining::ReceiveDamage(float IDamage)
 {
-	if (!bDead && !bInjury && !bUltimateAttacking)
+	if (!bDead && !bInjury)
 	{
+		if (bTrainingMode && GetWorld() && GetWorld()->GetTimeSeconds() < SpawnProtectionUntilTime)
+		{
+			return;
+		}
+
 		CurrentHP -= IDamage;
 		bInjury = true;
 		ResetAllConditions();
-		GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, FString::SanitizeFloat(CurrentHP));
 		if (CurrentHP <= 0)
 		{
 			bDead = true;
-			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, TEXT("Win"));
 			ExecuteDeath();
 		}
 		if (!bRolling && !bDoding)
@@ -287,7 +410,7 @@ void AAIEnemyForTraining::AttackTrace()
 		FVector ArrowForwardLocation = WeaponArrowComponent->GetForwardVector() * 100;
 
 		TArray<AActor*> ActorsToIgnore;
-		ActorsToIgnore.Add(GetOwner());
+		ActorsToIgnore.Add(this);
 
 		TArray<FHitResult> HitResults;
 
@@ -308,7 +431,7 @@ void AAIEnemyForTraining::AttackTrace()
 			for (const FHitResult& Hit : HitResults)
 			{
 				AActor* HitActor = Hit.GetActor();
-				if (HitActor && HitActor != GetOwner())
+				if (HitActor && HitActor != this)
 				{
 					ABaseRole* Target = Cast<ABaseRole>(HitActor);
 					if (Target)
@@ -321,7 +444,10 @@ void AAIEnemyForTraining::AttackTrace()
 	}
 	else
 	{
-		EnemyTarget->ReceiveDamage(Damage, bUltimateAttacking);
+		if (EnemyTarget)
+		{
+			EnemyTarget->ReceiveDamage(Damage, bUltimateAttacking);
+		}
 	}
 }
 
@@ -346,13 +472,17 @@ void AAIEnemyForTraining::UltimateAttackShifting(float Lerp)
 void AAIEnemyForTraining::BeginPlay()
 {
 	Super::BeginPlay();
-	SetTrainingTarget();
+	RefreshEnemyTarget(true);
 	CurrentHP = MaxHP;
 	AIController = Cast<AAIEnemyController>(GetController());
 	if (AIController)
 	{
 		AIController->GetBlackboardComponent()->SetValueAsObject(TEXT("Target"), EnemyTarget);
 	}
+	EnemyTargetRefreshCooldown = 0.0f;
+	SpawnProtectionUntilTime = bTrainingMode && GetWorld()
+		? GetWorld()->GetTimeSeconds() + FMath::Max(0.0f, SpawnProtectionSeconds)
+		: 0.0f;
 	SetActorTickEnabled(false);
 	InitialTransform = GetActorTransform();
 }
@@ -361,6 +491,11 @@ void AAIEnemyForTraining::BeginPlay()
 void AAIEnemyForTraining::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	EnemyTargetRefreshCooldown = FMath::Max(0.0f, EnemyTargetRefreshCooldown - DeltaTime);
+	if (!EnemyTarget)
+	{
+		RefreshEnemyTarget(false);
+	}
 	StrafeMovement(RandomStrafeValue);
 	
 }
@@ -371,4 +506,3 @@ void AAIEnemyForTraining::SetupPlayerInputComponent(UInputComponent* PlayerInput
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
 }
-
