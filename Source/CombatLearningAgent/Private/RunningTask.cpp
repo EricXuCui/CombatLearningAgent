@@ -11,8 +11,11 @@ EBTNodeResult::Type URunningTask::ExecuteTask(UBehaviorTreeComponent& OwnerComp,
 	if (AIController)
 	{
 		AAIEnemyForTraining* Target = Cast<AAIEnemyForTraining>(AIController->GetPawn());
-		Target->RunningMovement(true);
-		return EBTNodeResult::Succeeded;
+		if (Target)
+		{
+			Target->RunningMovement(true);
+			return EBTNodeResult::Succeeded;
+		}
 	}
 	return  EBTNodeResult::Failed;
 }

@@ -14,7 +14,7 @@ void UDistanceCheckService::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* N
 	{
 		ABaseRole* Target = Cast<ABaseRole>(AIController->GetBlackboardComponent()->GetValueAsObject(TEXT("Target")));
 		AAIEnemyForTraining* Self = Cast<AAIEnemyForTraining>(AIController->GetPawn());
-		if (Target)
+		if (Target && Self)
 		{
 			float Distance = Self->GetDistanceTo(Target);
 			if (Distance <= 250)

@@ -41,6 +41,7 @@ public:
 	UArrowComponent* WeaponArrowComponent;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CPPVariables")
 	FVector TargetLocation;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "CPPVariables")
 	AAIEnemyController* AIController;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CPPVariables")
@@ -54,14 +55,34 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CPPVariables")
 	TSubclassOf<ACharacter> CharacterToSpawn;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "CPPVariables")
 	AAIEnemyForTraining* TargetPawn;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CPPVariables")
-
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "CPPVariables")
 	FTransform InitialTransform;
 	int AttackIndex;
 	int RandomStrafeValue;
 	bool bUltimateSkillLoop;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Curriculum")
+	float BaseMaxHP;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Curriculum")
+	float BaseDamage;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Curriculum")
+	float CurriculumHPScale;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Curriculum")
+	float CurriculumDamageScale;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Learning|Performance")
+	float StrafeIntervalSeconds;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Learning|Performance")
+	float StrafeInitialDelaySeconds;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Learning|Performance")
+	float UltimateIntervalSeconds;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Learning|Performance")
+	float UltimateInitialDelaySeconds;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Learning|Performance")
+	float EnemyTargetRefreshInterval;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Learning|Performance")
+	float SpawnProtectionSeconds;
 	FTimerHandle _DelayRandomStrafeMovement;
 	FTimerHandle _DelayRandomUltimateAttack;
 	FTimerHandle _DelayUltimateAttackShifting;
@@ -79,13 +100,21 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CPPAnimations")
 	bool bUltimateAttacking;
 
+	UFUNCTION(BlueprintCallable)
 	void DrawSword();
+	UFUNCTION(BlueprintCallable)
 	void Attack();
+	UFUNCTION(BlueprintCallable)
 	void RunningMovement(bool Run);
+	UFUNCTION(BlueprintCallable)
 	void EnableStrafe();
+	UFUNCTION(BlueprintCallable)
 	void StrafeMovement(int RandomStrafeDirections);
+	UFUNCTION(BlueprintCallable)
 	void UltimateAttack();
+	UFUNCTION(BlueprintCallable)
 	void StopTheGame();
+	UFUNCTION(BlueprintCallable)
 	void ExecuteDeath();
 	UFUNCTION(BlueprintImplementableEvent)
 	void StartShifting();
@@ -109,9 +138,11 @@ public:
 	void AttackTrace();
 	UFUNCTION(BlueprintCallable)
 	void ResetInjury();
+	UFUNCTION(BlueprintCallable)
+	void ApplyCurriculumScalars(float InHPScale, float InDamageScale);
+	UFUNCTION(BlueprintCallable)
 	void ResetTarget();
-	UFUNCTION(BlueprintImplementableEvent)
-	void SetTrainingTarget();
+	void RefreshEnemyTarget(bool bForce = false);
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -119,6 +150,10 @@ protected:
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+
+private:
+	float EnemyTargetRefreshCooldown;
+	float SpawnProtectionUntilTime;
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
