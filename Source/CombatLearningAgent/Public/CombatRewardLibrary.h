@@ -35,25 +35,27 @@ public:
 		bool bStuck,
 		bool bTargetDead,
 		bool bSelfDead,
-		float WinReward = 10.0f,
-		float LoseReward = -10.0f,
+		float WinReward = 3.0f,
+		float LoseReward = -3.0f,
 		float TargetHPDamageScale = 1.0f,
 		float SelfHPDamageScale = 1.0f,
 		float TimePenalty = -0.001f,
 		float DistanceApproachScale = 0.01f,
 		float RetreatPenaltyScale = 0.02f,
 		float IdlePenalty = 0.0f,
-		float WallTouchPenalty = -1.0f,
-		float StuckPenalty = -2.0f,
+		float WallTouchPenalty = -0.3f,
+		float StuckPenalty = -0.5f,
 		float JitterPenaltyScale = -0.05f,
 		float StaminaUseThreshold = 0.1f,
 		float StaminaUseActionPenalty = -0.1f,
 		float IdleSpeedThreshold = 0.0f,
 		float MinCombatDistance = 150.0f,
 		float MaxCombatDistance = 900.0f,
-		bool bNormalizeFinalReward = false,
+		bool bNormalizeFinalReward = true,
 		float RewardScale = 1.0f,
-		float MaxAbsReward = 1.0f);
+		float MaxAbsReward = 1.0f,
+		int32 FailedActionRequests = 0,
+		float FailedActionPenaltyPerRequest = -0.01f);
 
 	UFUNCTION(BlueprintCallable, Category = "Learning|Reward")
 	static void UpdateRewardHistory(
