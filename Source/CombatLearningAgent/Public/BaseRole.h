@@ -145,6 +145,14 @@ public:
 	void CameraFovExtend(bool bEnable);
 	UFUNCTION(BlueprintCallable)
 	void ResetBaseRoleAgent();
+	UFUNCTION(BlueprintPure, Category = "Learning|Action")
+	void GetCombatActionAvailability(bool& bCanAttack, bool& bCanDefend, bool& bCanDodge, bool& bCanRoll, bool& bCanRun) const;
+	UFUNCTION(BlueprintCallable, Category = "Learning|Action")
+	int32 ConsumeFailedActionRequests(int32 MaxFailuresToCount = 3);
+	UFUNCTION(BlueprintCallable, Category = "Learning|Reward")
+	float ConsumeActionFailurePenalty(float FailurePenaltyPerAction = -0.01f, int32 MaxFailuresToCount = 3);
+	UFUNCTION(BlueprintCallable, Category = "Learning|Action")
+	bool ConsumeAnyActionExecutedSinceLastQuery();
 	UFUNCTION(BlueprintCallable)
 	void ApplyCurriculumScalars(float InHPScale, float InDamageScale, float InStaminaScale);
 	UFUNCTION(BlueprintCallable)
@@ -222,6 +230,12 @@ private:
 	mutable float CachedWallLeftNorm;
 	mutable float WallObservationCacheCooldown;
 	float SpawnProtectionUntilTime;
+	int32 FailedActionRequestsSinceConsume;
+	bool bAnyActionExecutedSinceConsume;
+
+	bool IsCombatActionGateOpen() const;
+	void RecordActionResult(bool bExecuted);
+ 
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;

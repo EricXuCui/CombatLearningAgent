@@ -15,6 +15,7 @@ namespace
 	{
 		return FMath::Max(0.1f, Scale);
 	}
+
 }
 
 // Sets default values
@@ -56,6 +57,8 @@ ABaseRole::ABaseRole()
 	CachedWallBackNorm = 1.0f;
 	CachedWallLeftNorm = 1.0f;
 	WallObservationCacheCooldown = 0.0f;
+	FailedActionRequestsSinceConsume = 0;
+	bAnyActionExecutedSinceConsume = false;
 	MaxHP = BaseMaxHP;
 	CurrentHP = MaxHP;
 	Damage = BaseDamage;
@@ -243,7 +246,8 @@ void ABaseRole::MouseY(float Val)
 
 void ABaseRole::Running()
 {
-	if (!bRolling && !bAttacking && !bDoding && bEquip)
+	const bool bCanRun = IsCombatActionGateOpen();
+	if (bCanRun)
 	{
 		CameraFovExtend(true);
 		if (bDefend)
@@ -252,10 +256,12 @@ void ABaseRole::Running()
 		}
 		bRunning = true;
 		GetCharacterMovement()->MaxWalkSpeed = 500.f;
+		RecordActionResult(true);
 	}
 	else
 	{
 		StopRunning();
+		RecordActionResult(false);
 	}
 }
 
@@ -271,8 +277,10 @@ void ABaseRole::Dodge()
 	constexpr float DirectionThreshold = 0.35f;
 	constexpr float SideThreshold = 0.35f;
 	constexpr float DodgeStaminaCost = 10.0f;
+	const bool bCanDodge = IsCombatActionGateOpen() && CurrentStamina >= DodgeStaminaCost;
+	bool bExecuted = false;
 
-	if (!bRolling && !bAttacking && !bDoding && bEquip && CurrentStamina >= DodgeStaminaCost)
+	if (bCanDodge)
 	{
 		if (GetMesh()->GetAnimInstance())
 		{
@@ -314,10 +322,12 @@ void ABaseRole::Dodge()
 				//Backward
 				AnimInstance->Montage_Play(DodgeAnimMontages[3], DodingPlayRate);
 			}
+			bExecuted = true;
 
 		}
 
 	}
+	RecordActionResult(bExecuted);
 }
 
 void ABaseRole::Roll()
@@ -325,8 +335,10 @@ void ABaseRole::Roll()
 	constexpr float DirectionThreshold = 0.35f;
 	constexpr float SideThreshold = 0.35f;
 	constexpr float RollStaminaCost = 13.0f;
+	const bool bCanRoll = IsCombatActionGateOpen() && CurrentStamina >= RollStaminaCost;
+	bool bExecuted = false;
 
-	if (!bRolling && !bAttacking && !bDoding && bEquip && CurrentStamina >= RollStaminaCost)
+	if (bCanRoll)
 	{
 		if (GetMesh()->GetAnimInstance())
 		{
@@ -368,16 +380,20 @@ void ABaseRole::Roll()
 				//Backward
 				AnimInstance->Montage_Play(RollAnimMontages[3], RollingPlayRate);
 			}
+			bExecuted = true;
 			
 		}
 
 	}
+	RecordActionResult(bExecuted);
 }
 
 void ABaseRole::Attack()
 {
 	constexpr float AttackStaminaCost = 15.0f;
-	if (!bRolling && !bAttacking && !bDoding && bEquip && CurrentStamina >= AttackStaminaCost && !bInjury)
+	const bool bCanAttack = IsCombatActionGateOpen() && CurrentStamina >= AttackStaminaCost && !bInjury;
+	bool bExecuted = false;
+	if (bCanAttack)
 	{
 		if (GetMesh()->GetAnimInstance())
 		{
@@ -405,9 +421,11 @@ void ABaseRole::Attack()
 			}
 			bAttacking = true;
 			AnimInstance->Montage_Play(AttackAnimMontages[AttackIndex]);
+			bExecuted = true;
 
 		}
 	}
+	RecordActionResult(bExecuted);
 }
 
 void ABaseRole::ResetAttacking()
@@ -424,7 +442,8 @@ void ABaseRole::ResetDoding()
 
 void ABaseRole::Defend()
 {
-	if (!bRolling && !bAttacking && !bDoding && bEquip && !bInjury)
+	const bool bCanDefend = IsCombatActionGateOpen() && !bInjury;
+	if (bCanDefend)
 	{
 		if (bRunning)
 		{
@@ -432,6 +451,7 @@ void ABaseRole::Defend()
 		}
 		bDefend = true;
 	}
+	RecordActionResult(bCanDefend);
 }
 
 void ABaseRole::StopDefending()
@@ -504,6 +524,16 @@ void ABaseRole::ResetBaseRoleAgent()
 	bTrainingMode = true;
 	bEquip = false;
 	bInjury = false;
+	ForwardVal = 0.0f;
+	RightVal = 0.0f;
+	LastForwardVal = 0.0f;
+	LastRightVal = 0.0f;
+	MovementJitterAccumulator = 0.0f;
+	EnemyTargetRefreshCooldown = 0.0f;
+	TrainingFocusCooldown = 0.0f;
+	WallObservationCacheCooldown = 0.0f;
+	FailedActionRequestsSinceConsume = 0;
+	bAnyActionExecutedSinceConsume = false;
 	if (bTrainingMode && GetWorld())
 	{
 		SpawnProtectionUntilTime = GetWorld()->GetTimeSeconds() + FMath::Max(0.0f, SpawnProtectionSeconds);
@@ -519,6 +549,60 @@ void ABaseRole::ResetBaseRoleAgent()
 	}
 	SetActorTransform(InitialTransform, false, nullptr, ETeleportType::TeleportPhysics);
 	DrawSword();
+}
+
+void ABaseRole::GetCombatActionAvailability(bool& bCanAttack, bool& bCanDefend, bool& bCanDodge, bool& bCanRoll, bool& bCanRun) const
+{
+	constexpr float AttackStaminaCost = 15.0f;
+	constexpr float DodgeStaminaCost = 10.0f;
+	constexpr float RollStaminaCost = 13.0f;
+
+	const bool bGateOpen = IsCombatActionGateOpen();
+	bCanAttack = bGateOpen && !bInjury && CurrentStamina >= AttackStaminaCost;
+	bCanDefend = bGateOpen && !bInjury;
+	bCanDodge = bGateOpen && CurrentStamina >= DodgeStaminaCost;
+	bCanRoll = bGateOpen && CurrentStamina >= RollStaminaCost;
+	bCanRun = bGateOpen;
+}
+
+bool ABaseRole::IsCombatActionGateOpen() const
+{
+	return !bRolling && !bAttacking && !bDoding && bEquip;
+}
+
+float ABaseRole::ConsumeActionFailurePenalty(float FailurePenaltyPerAction, int32 MaxFailuresToCount)
+{
+	const int32 FailuresToCount = ConsumeFailedActionRequests(MaxFailuresToCount);
+	const float SafeFailurePenalty = FMath::Min(0.0f, FailurePenaltyPerAction);
+	return SafeFailurePenalty * static_cast<float>(FailuresToCount);
+}
+
+int32 ABaseRole::ConsumeFailedActionRequests(int32 MaxFailuresToCount)
+{
+	const int32 SafeMaxFailures = FMath::Max(0, MaxFailuresToCount);
+	const int32 FailuresToCount = FMath::Clamp(FailedActionRequestsSinceConsume, 0, SafeMaxFailures);
+	FailedActionRequestsSinceConsume = 0;
+	bAnyActionExecutedSinceConsume = false;
+	return FailuresToCount;
+}
+
+bool ABaseRole::ConsumeAnyActionExecutedSinceLastQuery()
+{
+	const bool bHadAnyExecutedAction = bAnyActionExecutedSinceConsume;
+	bAnyActionExecutedSinceConsume = false;
+	return bHadAnyExecutedAction;
+}
+
+void ABaseRole::RecordActionResult(bool bExecuted)
+{
+	if (bExecuted)
+	{
+		bAnyActionExecutedSinceConsume = true;
+	}
+	else
+	{
+		++FailedActionRequestsSinceConsume;
+	}
 }
 
 
