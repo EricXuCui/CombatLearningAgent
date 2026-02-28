@@ -21,6 +21,7 @@ void UDistanceCheckService::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* N
 			{
 				AIController->GetBlackboardComponent()->SetValueAsBool("Attack", true);
 				AIController->GetBlackboardComponent()->SetValueAsBool("Run", false);
+				Self->RunningMovement(false);
 			}
 			else
 			{
@@ -28,6 +29,7 @@ void UDistanceCheckService::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* N
 				if (Distance >= 1300)
 				{
 					AIController->GetBlackboardComponent()->SetValueAsBool("Run", true);
+					Self->RunningMovement(true);
 				}
 			}
 		}

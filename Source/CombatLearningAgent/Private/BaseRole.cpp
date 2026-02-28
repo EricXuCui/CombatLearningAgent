@@ -314,8 +314,7 @@ void ABaseRole::ResetInjury()
 void ABaseRole::ResetBaseRoleAgent()
 {
 	SetTrainingTarget();
-	MaxHP = 100.f;
-	CurrentHP = 100.f;
+	CurrentHP = MaxHP;
 	Damage = 15.f;
 	MaxStamina = 100.f;
 	CurrentStamina = 100.f;
@@ -530,15 +529,9 @@ void ABaseRole::Tick(float DeltaTime)
 			if (EnemyTarget)
 			{
 				const FRotator FocusRot = UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), EnemyTarget->GetActorLocation());
-				const FRotator NewRot =FMath::RInterpTo(GetActorRotation(), FocusRot, DeltaTime, 5.0f);
+				const FRotator NewRot =FMath::RInterpTo(GetActorRotation(), FocusRot, DeltaTime, 2.5f);
 				SetActorRotation(FRotator(GetActorRotation().Pitch, NewRot.Yaw, GetActorRotation().Roll));
 			}
-		}
-		if (bLock)
-		{
-			FRotator RinterpFocusRotation = UKismetMathLibrary::RInterpTo(GetController()->GetControlRotation(), FocusRotation, GetWorld()->GetDeltaSeconds(), 15);
-			GetController()->SetControlRotation(FRotator(FMath::Clamp(RinterpFocusRotation.Pitch-5,-30,30), RinterpFocusRotation.Yaw, RinterpFocusRotation.Roll));
-			SetActorRotation(FRotator(GetActorRotation().Pitch,RinterpFocusRotation.Yaw, GetActorRotation().Roll));
 		}
 	}
 	else

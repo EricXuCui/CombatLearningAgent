@@ -17,12 +17,12 @@ AAIEnemyForTraining::AAIEnemyForTraining()
 	WeaponArrowComponent = CreateDefaultSubobject<UArrowComponent>(TEXT("WeaponArrow"));
 	WeaponArrowComponent->SetupAttachment(GetMesh());
 	// Initialize Variables
-	MaxHP = 200.f;
-	Damage = 15.f;
+	MaxHP = 100.f;
+	Damage = 7.f;
 	bDead = false;
 	bAttacking = false;
 	bRolling = false;
-	bTrainingMode = false;
+	bTrainingMode = false;	
 	bEquip = false;
 	RandomStrafeValue = 1;
 	bUltimateAttacking = false;
@@ -40,9 +40,10 @@ void AAIEnemyForTraining::DrawSword()
 			UAnimInstance* AnimInstace = GetMesh()->GetAnimInstance();
 			AnimInstace->Montage_Play(EquipMontage);
 			bEquip = true;
+			GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Black, TEXT("Start"));
 			if (AIController)
 			{
-				AIController->GetBlackboardComponent()->SetValueAsBool(TEXT("Equip"), true);
+				AIController->GetBlackboardComponent()->SetValueAsBool("Equip", true);
 				GetWorld()->GetTimerManager().SetTimer(_DelayRandomStrafeMovement, this, &AAIEnemyForTraining::EnableStrafe,
 					UKismetMathLibrary::RandomIntegerInRange(10, 15), true, UKismetMathLibrary::RandomIntegerInRange(10, 15));
 				GetWorld()->GetTimerManager().SetTimer(_DelayRandomUltimateAttack, this, &AAIEnemyForTraining::UltimateAttack,
@@ -206,9 +207,7 @@ void AAIEnemyForTraining::ResetInjury()
 void AAIEnemyForTraining::ResetTarget()
 {
 	SetTrainingTarget();
-	MaxHP = 200.f;
 	CurrentHP = MaxHP;
-	Damage = 15.f;
 	bDead = false;
 	bAttacking = false;
 	bRolling = false;
@@ -221,12 +220,10 @@ void AAIEnemyForTraining::ResetTarget()
 	AIController->GetBlackboardComponent()->SetValueAsBool("StrafeDoOnce", false);
 	AIController->GetBlackboardComponent()->SetValueAsBool("Attack", false);
 	AIController->GetBlackboardComponent()->SetValueAsBool("Run", false);
-	UBehaviorTreeComponent* BTComp = Cast<UBehaviorTreeComponent>(AIController->BrainComponent);
-	BTComp->RestartLogic();
+	AIController->GetBlackboardComponent()->SetValueAsBool("Equip", false);
 	GetCharacterMovement()->MaxWalkSpeed = 200.f;
 	SetActorTransform(InitialTransform, false, nullptr, ETeleportType::TeleportPhysics);
 	SetActorTickEnabled(false);
-
 }
 
 
@@ -251,6 +248,7 @@ void AAIEnemyForTraining::ResetAllConditions()
 	ResetAttacking();
 	ResetDoding();
 	ResetRoll();
+	ResetUltimateAttack();
 }
 
 void AAIEnemyForTraining::ReceiveDamage(float IDamage)
@@ -329,6 +327,7 @@ void AAIEnemyForTraining::AttackTrace()
 void AAIEnemyForTraining::EnableEquip()
 {
 	bEquip = true;
+	AIController->GetBlackboardComponent()->SetValueAsBool("Equip", true);
 }
 
 void AAIEnemyForTraining::ResetUltimateAttack()
@@ -346,13 +345,9 @@ void AAIEnemyForTraining::UltimateAttackShifting(float Lerp)
 void AAIEnemyForTraining::BeginPlay()
 {
 	Super::BeginPlay();
+	AIController = Cast<AAIEnemyController>(GetController());
 	SetTrainingTarget();
 	CurrentHP = MaxHP;
-	AIController = Cast<AAIEnemyController>(GetController());
-	if (AIController)
-	{
-		AIController->GetBlackboardComponent()->SetValueAsObject(TEXT("Target"), EnemyTarget);
-	}
 	SetActorTickEnabled(false);
 	InitialTransform = GetActorTransform();
 }
