@@ -47,7 +47,19 @@
       </section>
 
       <section id="Setup">
-        <h2>Results</h2>
+        <h2>Setup</h2>
+        <p>
+        A traditional Unreal Engine AI behavior tree was implemented in C++ to 
+          control the boss character as a rule-based baseline. Meanwhile, the 
+          Learning Agents framework was used to define the observation space, 
+          environment, and reward system for a reinforcement learning agent. This 
+          unified setup allowed for a controlled comparison between rule-based and
+          learning-based approaches within the same interactive environment.
+        </p>
+        <div style="display: flex; gap: 20px;">
+          <img src="WebsiteAssets/CPP_Code.png" width="400">
+          <img src="WebsiteAssets/BP_Code.png" width="400">
+        </div>
         <p>
           Each character action was encapsulated as a C++ function and exposed to 
           Blueprint, providing the Learning Agents plugin with a structured interface
