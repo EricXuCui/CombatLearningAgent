@@ -3,119 +3,348 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CombatLearningAgent</title>
+
+    <title>Combat Learning Agent</title>
+    <meta
+      name="description"
+      content="A McGill Undergraduate Research Showcase project on reinforcement learning for real-time combat in Unreal Engine 5."
+    />
     <link rel="stylesheet" href="style.css" />
   </head>
+
   <body>
-    <main class="container">
-      <h1>
-        Comparing Reinforcement Learning and Traditional Rule-Based Bots in
-        Real-Time Combat Environments
-      </h1>
-      <p class="subtitle">Eric Xu Cui, Matthew Tan Yin Sian, Jason Shen</p>
+    <main class="page">
+      <header class="intro" id="top">
+        <p class="showcase-label">McGill Undergraduate Research Showcase</p>
 
-      <div class="buttons">
-        <a
-          href="https://github.com/EricXuCui/CombatLearningAgent"
-          target="_blank"
-          >Code</a
-        >
-        <a href="#abstract">Abstract</a>
-        <a href="#results">Results</a>
-      </div>
-      <section id="abstract">
-        <h2>Abstract</h2>
-        <p style="text-align: justify;">
-          Video games have become a cornerstone of entertainment in most
-          cultures. They remain the favorite pastime with more than 212 Million
-          people playing regularly in the United States [1]. This extends to an
-          even more pronounced trend globally, where the number explodes to 3.22
-          billion [2]. With the speedy development of artificial intelligence
-          (AI), the intersection of AI and modern video games has become
-          increasingly prevalent. While AI has been around for a while, the use
-          of Reinforcement Learning (RL)is still an emerging trend within video
-          games. As illustrated in figure 1,RL allows for a model or agent to
-          obtain observations from their environment, select and action, then
-          receive a reward that determines how useful the action was. This
-          iterative process allows for an agent to effectively self-learn [3].
-          Our project aims to make use of an RL agent to learn the environment
-          of the video games based on a reward system to improve its playing
-          skills overtime. The amount of time needed for an agent to beat the
-          game will indicate to us the difficulty of the game, determining if it
-          is appropriate to release to the public.
+        <h1>Combat Learning Agent</h1>
+
+        <p class="project-title">
+          Reinforcement Learning for Real-Time Combat in Unreal Engine 5
         </p>
-     </section>
-      <section id="Setup">
-        <h2>Setup</h2>
+
+        <p class="authors">
+          <strong>Eric Xu Cui</strong>, Matthew Tan Yin Sian, Jason Shen
+        </p>
+
+        <p class="affiliation">
+          School of Computer Science, McGill University
+        </p>
+
+        <nav class="resource-links" aria-label="Project links">
+          <a
+            href="https://github.com/EricXuCui/CombatLearningAgent"
+            target="_blank"
+            rel="noopener noreferrer"
+          >GitHub</a>
+          <a href="#overview">Overview</a>
+          <a href="#system">System</a>
+          <a href="#training">Training</a>
+          <a href="#results">Results</a>
+          <a
+            href="Observation(Tentative).pdf"
+            target="_blank"
+            rel="noopener noreferrer"
+          >Observation design</a>
+          <a
+            href="Reward_Function(Tentative).pdf"
+            target="_blank"
+            rel="noopener noreferrer"
+          >Reward design</a>
+        </nav>
+      </header>
+
+      <section id="overview">
+        <h2>Overview</h2>
+
         <p>
-        A traditional Unreal Engine AI behavior tree was implemented in C++ to 
-          control the boss character as a rule-based baseline. Meanwhile, the 
-          Learning Agents framework was used to define the observation space, 
-          environment, and reward system for a reinforcement learning agent. This 
-          unified setup allowed for a controlled comparison between rule-based and
-          learning-based approaches within the same interactive environment.
-          <div style="display: flex; gap: 20px;">
-          <img src="WebsiteAssets/BT_Wiki.jpg" width="400">
-          <img src="WebsiteAssets/PPO_Framework.jpg" width="400">
-        </div>
+          This website documents a combat-learning prototype developed for the
+          McGill Undergraduate Research Showcase. The project investigates whether
+          a reinforcement learning agent can learn effective real-time melee combat
+          inside Unreal Engine 5 while interacting with the same movement, attack,
+          defense, and gameplay systems available to a human-controlled character.
         </p>
-      </section>
-        
-      <section id="implementations">
-        <h2>Implementations</h2>
+
         <p>
-          Each character action was encapsulated as a C++ function and exposed to 
-          Blueprint, providing the Learning Agents plugin with a structured interface
-          for character control.This design separates low-level implementation from 
-          high-level decision making, allowing the agent to interact with the environment
-          through a well-defined action space.
+          The player-side agent was trained with Proximal Policy Optimization
+          through Unreal Engine's Learning Agents framework. Its opponent was a
+          traditional rule-based boss implemented with a behavior tree and C++.
+          Observations described the current combat state, policy outputs were
+          translated into gameplay actions, and rewards were generated from combat
+          events and episode outcomes.
         </p>
-        <div style="display: flex; gap: 20px;">
-          <img src="WebsiteAssets/CPP_Code.png" width="400">
-          <img src="WebsiteAssets/BP_Code.png" width="400">
-        </div>
-      </section>
-      <section id="Observation & Reward Design">
-        <h2>Observation & Reward Design</h2>
+
         <p>
-          <p>We design the observation space and reward system to guide the agent's learning 
-            process. The observation space defines how the agent perceives the environment, 
-            while the reward system provides feedback to encourage effective behaviors. A detailed overview
-            is provided in the following document.
+          The version presented at the showcase was still an early prototype and
+          had not yet produced a reliable winning policy. Development continued
+          after the event through repeated changes to reward shaping, action timing,
+          memory settings, and training stability. The final recorded evaluation
+          contains 100 inference episodes: the trained agent won
+          <strong>98</strong> and lost <strong>2</strong>, corresponding
+          to a <strong>98% win rate</strong> against the rule-based boss.
         </p>
-        <iframe src="Observation(Tentative).pdf" 
-        width="100%" 
-        height="700px"
-        style="border-radius: 12px; border: none;">
-          
-        </iframe>
-        <iframe src="Reward_Function(Tentative).pdf" 
-        width="100%" 
-        height="700px"
-        style="border-radius: 12px; border: none;">
-          </iframe>
-      </section>
-      <section id="results">
-        <h2>Results</h2>
-        <p>
-          Training curves, gameplay demonstrations, and behavior analysis will
-          be shown here.
-        </p>
-        <video width="100%" autoplay muted loop><source src="agent_fail.mp4" type="video/mp4"></video>
-        <p>RL agent learning</p>
-        <video width="100%" autoplay muted loop><source src="agent_better.mp4" type="video/mp4"></video>
-        <p>RL agent improvement</p>
       </section>
 
-      <section id="results">
-        <h2>References</h2>
-          <p>[1] https://www.theesa.com/video-games-remain-americas-favorite-pastime-with-more-than-212-million-americans-playing-regularly/</p>
-          <p>[2] https://ieeexplore.ieee.org/document/11079788</p>
-          <p>[3] https://anujdutt9.github.io/reinforcement-learning-basics</p>
-          <p>[4] https://rdcu.be/e73n9</p>
-          <p>[5] https://dev.epicgames.com/community/learning/courses/GAR/unreal-engine-learning-agents-5-5/bZnJ/unreal-engine-learning-agents-5-5</p>
-        
+      <section id="system">
+        <h2>System</h2>
+
+        <p>
+          Both characters operate through the same underlying combat mechanics.
+          The boss selects behavior using a traditional Unreal Engine behavior tree.
+          The learning agent receives a structured observation of the encounter and
+          selects movement, attack, rotation, and defensive actions through a PPO
+          policy.
+        </p>
+
+        <div class="image-row">
+          <figure>
+            <img
+              src="WebsiteAssets/BT_Wiki.jpg"
+              alt="Unreal Engine behavior tree controlling the boss"
+            />
+            <figcaption>Behavior tree used by the rule-based boss.</figcaption>
+          </figure>
+
+          <figure>
+            <img
+              src="WebsiteAssets/PPO_Framework.jpg"
+              alt="PPO agent interaction framework"
+            />
+            <figcaption>
+              Observation, action, and reward interaction used by the PPO agent.
+            </figcaption>
+          </figure>
+        </div>
       </section>
+
+      <section id="implementation">
+        <h2>Implementation</h2>
+
+        <p>
+          Combat actions were implemented in C++ and exposed to Blueprint. This
+          provided the Learning Agents plugin with a small and explicit action
+          interface while reusing the existing gameplay systems. The policy did not
+          directly manipulate animation or combat state; it selected high-level
+          commands that were executed through the same character functions used by
+          the rest of the game.
+        </p>
+
+        <div class="image-row">
+          <figure>
+            <img
+              src="WebsiteAssets/CPP_Code.png"
+              alt="C++ combat action implementation"
+            />
+            <figcaption>C++ gameplay implementation.</figcaption>
+          </figure>
+
+          <figure>
+            <img
+              src="WebsiteAssets/BP_Code.png"
+              alt="Blueprint interface used by the learning agent"
+            />
+            <figcaption>Blueprint interface exposed to the learning agent.</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section id="training">
+        <h2>Training</h2>
+
+        <p>
+          Training required substantially more iteration than the initial showcase
+          version suggested. Shorter and unsuccessful runs often improved some
+          metrics without producing a stable combat strategy. The longer final run
+          shows a sustained increase in average return and reward sum together with
+          a reduction in average episode length, indicating that the agent learned
+          to finish encounters more successfully and more quickly.
+        </p>
+
+        <figure class="wide-figure">
+          <img
+            src="WebsiteAssets/TensorBoard_Short_Run.png"
+            alt="TensorBoard dashboard from a shorter PPO training run"
+          />
+          <figcaption>
+            TensorBoard capture from a shorter recorded PPO run. Some learning is
+            visible, but the experience metrics remain comparatively unstable.
+          </figcaption>
+        </figure>
+
+        <figure class="wide-figure">
+          <img
+            src="WebsiteAssets/TensorBoard_Final_Run.png"
+            alt="TensorBoard dashboard from the longer final PPO training run"
+          />
+          <figcaption>
+            TensorBoard capture from the longer final run. Average return and reward
+            sum rise while average episode length declines over training.
+          </figcaption>
+        </figure>
+      </section>
+
+      <section id="results">
+        <h2>Inference results</h2>
+
+        <p>
+          The final policy was evaluated over 100 recorded combat episodes.
+          It won 98 encounters and lost 2. Across all episodes, the mean
+          duration was 24.87 seconds and the median duration was
+          23.43 seconds. In winning episodes, the agent retained an
+          average of 71.22 health, with a median of
+          70.
+        </p>
+
+        <div class="table-wrapper">
+          <table>
+            <tbody>
+              <tr>
+                <th scope="row">Evaluation episodes</th>
+                <td>100</td>
+              </tr>
+              <tr>
+                <th scope="row">Agent wins</th>
+                <td>98</td>
+              </tr>
+              <tr>
+                <th scope="row">Boss wins</th>
+                <td>2</td>
+              </tr>
+              <tr>
+                <th scope="row">Agent win rate</th>
+                <td>98%</td>
+              </tr>
+              <tr>
+                <th scope="row">Mean episode duration</th>
+                <td>24.87 seconds</td>
+              </tr>
+              <tr>
+                <th scope="row">Median episode duration</th>
+                <td>23.43 seconds</td>
+              </tr>
+              <tr>
+                <th scope="row">Mean remaining HP in wins</th>
+                <td>71.22</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="data-link">
+          <a
+            href="data/InferenceResults_20260717_225347.csv"
+            download
+          >Download the raw inference results (CSV)</a>
+        </p>
+
+        <div class="video-list">
+          <figure>
+            <video controls muted loop playsinline preload="metadata">
+              <source src="agent_fail.mp4" type="video/mp4" />
+              Your browser does not support embedded video.
+            </video>
+            <figcaption>Early-stage policy during training.</figcaption>
+          </figure>
+
+          <figure>
+            <video controls muted loop playsinline preload="metadata">
+              <source src="agent_better.mp4" type="video/mp4" />
+              Your browser does not support embedded video.
+            </video>
+            <figcaption>Improved policy after continued training.</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section id="development">
+        <h2>Development notes</h2>
+
+        <ul>
+          <li>
+            Reward shaping strongly affected whether the policy learned useful
+            combat or repetitive reward-seeking behavior.
+          </li>
+          <li>
+            Short action intervals caused visually unstable movement and rapid
+            switching between actions.
+          </li>
+          <li>
+            Memory did not consistently improve the policy and sometimes reduced
+            active engagement.
+          </li>
+          <li>
+            Several unsuccessful configurations produced numerical instability,
+            attack spamming, or overly defensive behavior.
+          </li>
+          <li>
+            The final result was obtained through post-showcase development rather
+            than during the original event.
+          </li>
+        </ul>
+      </section>
+
+      <section id="timeline">
+        <h2>Timeline</h2>
+
+        <p>
+          <strong>Showcase prototype:</strong> combat environment, behavior-tree
+          opponent, Learning Agents integration, and initial training attempts.
+        </p>
+
+        <p>
+          <strong>Post-showcase development:</strong> reward redesign, timing
+          adjustments, stability fixes, longer training, and the 100-episode
+          inference evaluation reported above.
+        </p>
+
+        <p>
+          <strong>Future work:</strong> transferring the approach into a commercial
+          game will be treated as a separate research project with a new repository,
+          team, and experimental protocol.
+        </p>
+      </section>
+
+      <section id="team">
+        <h2>Showcase team</h2>
+
+        <p>
+          <strong>Eric Xu Cui</strong> — project lead, primary development,
+          reinforcement learning integration, training, evaluation, and website.
+        </p>
+        <p>Matthew Tan Yin Sian — showcase project contributor.</p>
+        <p>Jason Shen — showcase project contributor.</p>
+        <p class="small">Names are listed in order of contribution.</p>
+      </section>
+
+      <section id="references">
+        <h2>References and resources</h2>
+
+        <ol class="references">
+          <li>
+            Epic Games,
+            <a
+              href="https://dev.epicgames.com/community/learning/courses/GAR/unreal-engine-learning-agents-5-5/bZnJ/unreal-engine-learning-agents-5-5"
+              target="_blank"
+              rel="noopener noreferrer"
+            >Unreal Engine Learning Agents</a>.
+          </li>
+          <li>
+            <a
+              href="https://anujdutt9.github.io/reinforcement-learning-basics"
+              target="_blank"
+              rel="noopener noreferrer"
+            >Reinforcement Learning Basics</a>.
+          </li>
+          <li>
+            Additional related work and formal citations will be added as the
+            project documentation is revised.
+          </li>
+        </ol>
+      </section>
+
+      <footer>
+        <p>Last updated 2026 · <a href="#top">Back to top</a></p>
+      </footer>
     </main>
   </body>
 </html>
